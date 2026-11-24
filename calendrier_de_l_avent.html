@@ -1,0 +1,1078 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Notre Calendrier de l'Avent ✨</title>
+
+    <!-- Balises Web App / Mobile pour un rendu plein écran sur iPhone et Android -->
+    <meta name="theme-color" content="#24070d">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Notre Avent ✨">
+    <meta name="description" content="24 jours de petites attentions, de souvenirs et de surprises pensées rien que pour toi.">
+
+    <!-- Chargement de Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Polices élégantes : Cormorant Garamond pour les titres romantiques et Inter pour la lisibilité -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+    <!-- Palette personnalisée : bordeaux profond, nuit étoilée, crème doux, or et vert sapin -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        bordeaux: {
+                            950: '#1c050a',
+                            900: '#360a14',
+                            800: '#541120',
+                            700: '#72182b',
+                        },
+                        nuit: {
+                            950: '#0d0914',
+                            900: '#161024',
+                        },
+                        creme: {
+                            50: '#fdfbf7',
+                            100: '#f7f0e4',
+                            200: '#eadcc6',
+                        },
+                        dore: {
+                            200: '#f5e4bc',
+                            300: '#ebd29b',
+                            400: '#d4af37',
+                            500: '#b38d1d',
+                        },
+                        sapin: {
+                            800: '#163326',
+                            900: '#0d2219',
+                        }
+                    },
+                    fontFamily: {
+                        serif: ['"Cormorant Garamond"', 'Georgia', 'serif'],
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Styles personnalisés pour la 3D, la disparition du battant, les étoiles et les animations -->
+    <style>
+        body {
+            background: radial-gradient(circle at top center, #541120 0%, #2c0812 42%, #130916 100%);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Perspective 3D appliquée au conteneur de chaque case */
+        .door-container {
+            perspective: 1100px;
+        }
+
+        /* Battant (porte) de la case */
+        .door-flap {
+            transform-style: preserve-3d;
+            transform-origin: left center;
+            backface-visibility: hidden;
+            transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+        }
+
+        /*
+         * CORRECTION CRUCIALE :
+         * Lors de la première ouverture (.is-opening), le battant pivote en 3D sur l'axe Y,
+         * puis s'efface proprement en fondu (opacity: 0, visibility: hidden, pointer-events: none)
+         * pour ne JAMAIS recouvrir ou bloquer la case d'à côté.
+         */
+        @keyframes openAndFadeDoor {
+            0% {
+                transform: rotateY(0deg);
+                opacity: 1;
+                box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
+            }
+            60% {
+                transform: rotateY(-108deg);
+                opacity: 1;
+                box-shadow: 12px 10px 24px rgba(0, 0, 0, 0.45);
+            }
+            100% {
+                transform: rotateY(-125deg);
+                opacity: 0;
+                visibility: hidden;
+                box-shadow: none;
+            }
+        }
+
+        .door-container.is-opening .door-flap {
+            pointer-events: none;
+            z-index: 20;
+            animation: openAndFadeDoor 0.85s cubic-bezier(0.34, 1.25, 0.64, 1) forwards;
+        }
+
+        /* Pour les cases déjà ouvertes (sauvegardées ou après fin d'animation) : battant totalement masqué */
+        .door-container.is-open .door-flap {
+            display: none;
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+        }
+
+        /* Secousse douce lorsqu'elle tente d'ouvrir une case future */
+        @keyframes gentleShake {
+            0%, 100% { transform: translateX(0); }
+            20% { transform: translateX(-5px) rotate(-1.5deg); }
+            40% { transform: translateX(5px) rotate(1.5deg); }
+            60% { transform: translateX(-4px) rotate(-0.8deg); }
+            80% { transform: translateX(4px) rotate(0.8deg); }
+        }
+
+        .shake-locked {
+            animation: gentleShake 0.45s ease-in-out;
+        }
+
+        /* Texture étoilée discrète sur les portes fermées */
+        .card-texture {
+            background-image: radial-gradient(rgba(235, 210, 155, 0.14) 1px, transparent 0);
+            background-size: 16px 16px;
+        }
+
+        /* Légère lueur pulsante pour la case du jour */
+        @keyframes softGlow {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(212, 175, 55, 0.35), 0 10px 25px rgba(0, 0, 0, 0.35); }
+            50% { box-shadow: 0 0 0 6px rgba(212, 175, 55, 0.1), 0 12px 28px rgba(212, 175, 55, 0.25); }
+        }
+
+        .today-glow {
+            animation: softGlow 2.8s ease-in-out infinite;
+        }
+
+        /* Apparition fluide de la modale */
+        @keyframes modalPop {
+            0% { opacity: 0; transform: scale(0.92) translateY(14px); }
+            100% { opacity: 1; transform: scale(1) translateY(0); }
+        }
+
+        .animate-modal {
+            animation: modalPop 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        /* Canevas de neige en arrière-plan */
+        #snow-canvas {
+            position: fixed;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        /* Canevas de confettis/étincelles festives au-dessus de la modale */
+        #confetti-canvas {
+            position: fixed;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 60;
+        }
+    </style>
+</head>
+<body class="text-creme-50 font-sans antialiased selection:bg-dore-400 selection:text-bordeaux-950">
+
+    <!-- Flocons de neige doux en arrière-plan -->
+    <canvas id="snow-canvas" aria-hidden="true"></canvas>
+
+    <!-- Étincelles et confettis festifs à l'ouverture d'une case -->
+    <canvas id="confetti-canvas" aria-hidden="true"></canvas>
+
+    <!-- Bandeau discret affiché uniquement quand le Mode Aperçu / Test est actif -->
+    <div id="preview-banner" class="hidden relative z-20 bg-sapin-800/95 border-b border-dore-400/40 text-creme-100 text-xs sm:text-sm py-2 px-4 text-center shadow-md backdrop-blur-sm">
+        <span class="font-medium text-dore-300">✨ Mode Aperçu / Test actif :</span> Toutes les cases sont déverrouillées pour tes vérifications.
+    </div>
+
+    <!-- Conteneur principal -->
+    <div class="relative z-10 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
+
+        <!-- En-tête romantique -->
+        <header class="text-center mb-10 sm:mb-14">
+            <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-bordeaux-800/75 border border-dore-400/35 text-dore-300 text-xs tracking-widest uppercase mb-4 shadow-sm backdrop-blur-sm">
+                <span>✦</span>
+                <span>1er au 24 Décembre</span>
+                <span>✦</span>
+            </div>
+
+            <h1 id="calendar-title" class="font-serif text-4xl sm:text-5xl md:text-6xl font-bold text-creme-50 tracking-tight mb-3 drop-shadow-md">
+                Notre Calendrier de l'Avent
+            </h1>
+
+            <p id="calendar-subtitle" class="text-creme-200/90 text-sm sm:text-base max-w-xl mx-auto font-light leading-relaxed">
+                Chaque jour jusqu'à Noël, ouvre une nouvelle case pour découvrir une petite attention, un souvenir ou une surprise pensée rien que pour toi.
+            </p>
+
+            <!-- Compteur de progression -->
+            <div class="mt-6 inline-flex items-center gap-3 bg-nuit-950/55 border border-dore-400/25 rounded-2xl px-4 py-2 text-xs sm:text-sm text-creme-200 backdrop-blur-sm">
+                <span>✨ Surprises découvertes :</span>
+                <span id="progress-counter" class="font-semibold text-dore-300">0 / 24</span>
+            </div>
+        </header>
+
+        <!-- Notification douce (Toast) pour les cases futures ou actions -->
+        <div id="toast-message" class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 pointer-events-none opacity-0 transition-all duration-300 translate-y-4 w-[92%] max-w-md">
+            <div class="bg-creme-50 text-bordeaux-950 border-2 border-dore-400 rounded-2xl px-5 py-3.5 shadow-2xl flex items-center gap-3.5">
+                <span class="text-2xl shrink-0" id="toast-icon">🤫</span>
+                <p id="toast-text" class="text-sm font-medium leading-snug"></p>
+            </div>
+        </div>
+
+        <!-- Grille responsive des 24 cases -->
+        <main>
+            <div id="calendar-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3.5 sm:gap-5">
+                <!-- Généré dynamiquement par JavaScript -->
+            </div>
+        </main>
+
+        <!-- Pied de page avec contrôles discrets (Mode Test + Réinitialisation) -->
+        <footer class="mt-14 pt-8 border-t border-dore-400/15 text-center text-creme-200/75 text-xs sm:text-sm space-y-5">
+            <p class="font-serif italic text-lg text-dore-300/90">
+                Fait avec tout mon amour pour toi ❤️
+            </p>
+
+            <div class="flex flex-wrap items-center justify-center gap-3 pt-1">
+                <button
+                    id="toggle-preview-btn"
+                    type="button"
+                    class="px-4 py-2.5 rounded-xl bg-nuit-950/65 hover:bg-sapin-800 text-creme-200/85 hover:text-creme-50 border border-dore-400/25 transition-all text-xs cursor-pointer"
+                >
+                    🔑 Mode Aperçu / Test (Débloquer tout)
+                </button>
+
+                <button
+                    id="reset-progress-btn"
+                    type="button"
+                    class="px-4 py-2.5 rounded-xl bg-nuit-950/65 hover:bg-bordeaux-800 text-creme-200/75 hover:text-creme-50 border border-creme-200/15 transition-all text-xs cursor-pointer"
+                >
+                    ↺ Réinitialiser les cases ouvertes
+                </button>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Modale élégante d'affichage du cadeau -->
+    <div id="gift-modal" class="fixed inset-0 z-40 hidden items-center justify-center p-4 bg-nuit-950/80 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+        <div class="relative w-full max-w-lg bg-creme-50 text-bordeaux-950 rounded-3xl border-2 border-dore-400 shadow-2xl overflow-hidden animate-modal max-h-[90vh] flex flex-col">
+
+            <!-- Liseré décoratif supérieur -->
+            <div class="h-2 w-full bg-gradient-to-r from-bordeaux-800 via-dore-400 to-sapin-800 shrink-0"></div>
+
+            <!-- Bouton fermer (croix) -->
+            <button
+                id="close-modal-x"
+                type="button"
+                aria-label="Fermer la fenêtre"
+                class="absolute top-4 right-4 w-10 h-10 rounded-full bg-creme-200/85 hover:bg-creme-200 text-bordeaux-900 flex items-center justify-center transition-colors cursor-pointer z-10"
+            >
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+
+            <!-- Contenu défilable si le message ou l'image est grand sur mobile -->
+            <div class="p-6 sm:p-8 text-center overflow-y-auto">
+                <!-- Badge du jour -->
+                <div class="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-bordeaux-900 text-dore-300 text-xs font-semibold tracking-wider uppercase mb-3">
+                    <span>Case n°</span>
+                    <span id="modal-day">1</span>
+                    <span>• Décembre</span>
+                </div>
+
+                <!-- Emoji du cadeau -->
+                <div id="modal-emoji" class="text-5xl mb-2 drop-shadow-sm">🎁</div>
+
+                <!-- Titre du cadeau -->
+                <h2 id="modal-title" class="font-serif text-3xl sm:text-4xl font-bold text-bordeaux-900 leading-tight mb-4">
+                    Titre du cadeau
+                </h2>
+
+                <!-- Image optionnelle (masquée automatiquement si vide ou erreur) -->
+                <div id="modal-image-wrapper" class="hidden mb-5 rounded-2xl overflow-hidden border border-dore-400/40 shadow-inner bg-creme-100">
+                    <img
+                        id="modal-image"
+                        src=""
+                        alt="Illustration de ta surprise"
+                        class="w-full h-48 sm:h-56 object-cover"
+                        onerror="this.parentElement.classList.add('hidden')"
+                    >
+                </div>
+
+                <!-- Message personnalisé -->
+                <div class="bg-creme-100/95 border border-creme-200 rounded-2xl p-4 sm:p-5 mb-6 text-left sm:text-center">
+                    <p id="modal-message" class="text-bordeaux-900/90 text-sm sm:text-base leading-relaxed whitespace-pre-line">
+                        Ton message personnalisé ici.
+                    </p>
+                </div>
+
+                <!-- Actions -->
+                <div class="flex flex-col sm:flex-row items-center justify-center gap-3">
+                    <button
+                        id="claim-gift-btn"
+                        type="button"
+                        class="w-full sm:w-auto flex-1 py-3 px-5 rounded-2xl font-medium text-sm transition-all cursor-pointer flex items-center justify-center gap-2 shadow-md"
+                    >
+                        <!-- Mis à jour dynamiquement -->
+                    </button>
+
+                    <button
+                        id="close-modal-btn"
+                        type="button"
+                        class="w-full sm:w-auto py-3 px-5 rounded-2xl bg-creme-200/85 hover:bg-creme-200 text-bordeaux-900 font-medium text-sm transition-colors cursor-pointer"
+                    >
+                        Fermer
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===================================================================== -->
+    <!-- SCRIPT PRINCIPAL : MODIFIE FACILEMENT TES 24 CADEAUX JUSTE EN DESSOUS -->
+    <!-- ===================================================================== -->
+    <script>
+        /**
+         * ===================================================================
+         * 1. ZONE DE PERSONNALISATION (Modifie uniquement cette section !)
+         * ===================================================================
+         * Chaque objet représente un jour du 1er au 24 décembre :
+         * - jour    : Numéro du jour (1 à 24)
+         * - titre   : Titre affiché dans la case ouverte et la fenêtre modale
+         * - message : Ton mot doux, bon pour, ou indice sur le cadeau
+         * - emoji   : L'icône affichée dans la case ouverte et la modale
+         * - image   : (Optionnel) URL d'une photo ou GIF (laisse "" si aucune)
+         */
+        const CONFIG_CALENDRIER = {
+            titrePrincipal: "Notre Calendrier de l'Avent",
+            sousTitre: "Chaque jour jusqu'à Noël, ouvre une nouvelle case pour découvrir une petite attention, un souvenir ou une surprise pensée rien que pour toi.",
+            // true = mélange les numéros sur la grille comme un vrai calendrier papier
+            // false = affiche les cases dans l'ordre 1 à 24
+            melangerCases: true
+        };
+
+        const CADEAUX = [
+            {
+                jour: 1,
+                titre: "Coup d'envoi tout doux",
+                message: "C'est parti pour 24 jours de petites attentions ! Pour bien commencer décembre, un chocolat et un petit mot t'attendent sous ton oreiller ce soir.",
+                emoji: "✨",
+                image: ""
+            },
+            {
+                jour: 2,
+                titre: "Massage royal de 30 min",
+                message: "Bon valable dès ce soir (ou quand tu veux) : 30 minutes de massage du dos, de la nuque ou des pieds, avec musique douce et téléphones en mode avion.",
+                emoji: "💆‍♀️",
+                image: ""
+            },
+            {
+                jour: 3,
+                titre: "Soirée ciné à ta carte",
+                message: "Ce soir, c'est toi la patronne de la télécommande ! Tu choisis le film (même si c'est un film de Noël cliché), je m'occupe du plaid, des snacks et des câlins.",
+                emoji: "🎬",
+                image: ""
+            },
+            {
+                jour: 4,
+                titre: "Chocolat chaud de compet'",
+                message: "Ce soir ou ce week-end, je te prépare un chocolat chaud maison bien onctueux avec chantilly et petits chamallows (ou un carré de chocolat fondu).",
+                emoji: "☕",
+                image: ""
+            },
+            {
+                jour: 5,
+                titre: "Ta friandise préférée",
+                message: "Un tout petit plaisir sucré rien que pour toi : regarde dans ton sac (ou dans le placard de la cuisine), j'y ai caché une de tes douceurs préférées !",
+                emoji: "🍫",
+                image: ""
+            },
+            {
+                jour: 6,
+                titre: "Petit-déjeuner au lit",
+                message: "Tu ne bouges pas de la couette ! Je t'apporte ton café ou ton thé avec des tartines chaudes (ou du pain perdu maison) directement au lit.",
+                emoji: "🥐",
+                image: ""
+            },
+            {
+                jour: 7,
+                titre: "Playlist spéciale 'Nous'",
+                message: "Je t'ai préparé une petite playlist de chansons qui me font penser à toi et à nos meilleurs moments. On se l'écoute ensemble ce soir ?",
+                emoji: "🎶",
+                image: ""
+            },
+            {
+                jour: 8,
+                titre: "Balade sous les lumières",
+                message: "Enfile ton manteau et ton écharpe : on part marcher main dans la main en fin de journée pour profiter des illuminations d'hiver avec un thermos chaud.",
+                emoji: "🌟",
+                image: ""
+            },
+            {
+                jour: 9,
+                titre: "Goûter crêpes ou pancakes",
+                message: "Bon pour un goûter fait maison : une pile de crêpes ou de pancakes bien chauds avec la garniture de ton choix !",
+                emoji: "🥞",
+                image: ""
+            },
+            {
+                jour: 10,
+                titre: "10 raisons pour lesquelles je t'aime",
+                message: "1. Ton sourire le matin\n2. Ton rire qui me fait craquer\n3. Ta bienveillance\n4. Nos fous rires pour rien\n5. La façon dont tu rends chaque journée plus douce...\n(Je te dis les 5 suivantes en vrai ce soir !)",
+                emoji: "💌",
+                image: ""
+            },
+            {
+                jour: 11,
+                titre: "Soirée spa à la maison",
+                message: "Ce soir, zéro stress : douche bien chaude ou bain, un petit masque visage pour prendre soin de toi, bougie allumée et détente totale.",
+                emoji: "🛁",
+                image: ""
+            },
+            {
+                jour: 12,
+                titre: "Bon 'Joker Absolu'",
+                message: "Ce bon te donne le pouvoir absolu une fois : choisir le repas, esquiver une corvée ou gagner un débat sans négociation possible !",
+                emoji: "👑",
+                image: ""
+            },
+            {
+                jour: 13,
+                titre: "Cookies maison tout chauds",
+                message: "Une petite fournée de cookies (ou brownies) faits maison rien que pour toi, à dévorer encore tièdes sous un plaid.",
+                emoji: "🍪",
+                image: ""
+            },
+            {
+                jour: 14,
+                titre: "Photo souvenir imprimée",
+                message: "J'ai fait imprimer une de nos plus belles photos ensemble avec un petit mot au dos, pour que tu puisses la garder près de toi.",
+                emoji: "📸",
+                image: ""
+            },
+            {
+                jour: 15,
+                titre: "Soirée jeux & apéro",
+                message: "Un petit apéro dînatoire improvisé rien que tous les deux avec notre jeu préféré et zéro téléphone sur la table.",
+                emoji: "🎲",
+                image: ""
+            },
+            {
+                jour: 16,
+                titre: "Un ticket à gratter porte-bonheur",
+                message: "Si on devient millionnaires on part au soleil, sinon on rigole bien ! Viens réclamer ton petit ticket à gratter contre un bisou.",
+                emoji: "🍀",
+                image: ""
+            },
+            {
+                jour: 17,
+                titre: "Chaussettes bien chaudes",
+                message: "Parce que tu as toujours les pieds gelés en décembre... Une petite paire de chaussettes toute douce t'attend !",
+                emoji: "🧦",
+                image: ""
+            },
+            {
+                jour: 18,
+                titre: "Dîner aux chandelles maison",
+                message: "Ce soir, tu ne fais rien en cuisine : je prépare ton plat préféré et je dresse une vraie belle table rien que pour nous deux.",
+                emoji: "🍝",
+                image: ""
+            },
+            {
+                jour: 19,
+                titre: "Mini quiz sur notre couple",
+                message: "Ce soir, petit quiz de 5 questions drôles sur nous deux ! À la clé : un gage mignon ou un câlin géant selon ton score.",
+                emoji: "🎯",
+                image: ""
+            },
+            {
+                jour: 20,
+                titre: "Bocal à idées de dates",
+                message: "Un petit bocal rempli d'idées de sorties et de soirées à deux (gratuites ou tout petit budget) à piocher ensemble toute l'année prochaine.",
+                emoji: "🫙",
+                image: ""
+            },
+            {
+                jour: 21,
+                titre: "Premier jour de l'hiver",
+                message: "C'est officiellement l'hiver ! La meilleure excuse du monde pour rester blottis l'un contre l'autre toute la soirée.",
+                emoji: "❄️",
+                image: ""
+            },
+            {
+                jour: 22,
+                titre: "Bougie cocooning",
+                message: "Une petite bougie parfumée pour rendre nos soirées d'hiver encore plus chaleureuses. Demande-la-moi !",
+                emoji: "🕯️",
+                image: ""
+            },
+            {
+                jour: 23,
+                titre: "J-1 : Soirée pyjama de Noël",
+                message: "Demain c'est le réveillon ! Ce soir : pyjama confortable, boisson chaude et notre film d'hiver favori.",
+                emoji: "🎄",
+                image: ""
+            },
+            {
+                jour: 24,
+                titre: "Joyeux Réveillon mon amour",
+                message: "Nous y voilà ! Merci d'avoir partagé ces 24 petites cases avec moi. Mon plus beau cadeau, c'est toi au quotidien. Une petite lettre et ta surprise du 24 t'attendent...",
+                emoji: "❤️",
+                image: ""
+            }
+        ];
+
+        /**
+         * ===================================================================
+         * 2. LOGIQUE DE L'APPLICATION (Pas besoin de modifier ci-dessous)
+         * ===================================================================
+         */
+        const STORAGE_KEY = 'calendrier_avent_romantique_v2';
+
+        // Messages tendres affichés lorsqu'elle clique sur une case future
+        const MESSAGES_PATIENCE = [
+            "Patience mon cœur ! Le Père Noël n'est pas encore passé pour cette case 🎅✨",
+            "Chut... Cette surprise dort encore ! Reviens le {jour} décembre 🤫❤️",
+            "Pas de triche ! Les meilleures choses savent se faire attendre jusqu'au {jour} décembre 😉",
+            "Oups, cette porte est encore fermée à clé jusqu'au {jour} décembre ! 🔑✨",
+            "Trop curieuse ! Encore un peu de patience avant le {jour} décembre 💕"
+        ];
+
+        // État global
+        let state = {
+            openedDays: [],      // Jours déjà ouverts (ex: [1, 2])
+            claimedDays: [],     // Cadeaux marqués comme "récupérés"
+            previewMode: false,  // Mode Aperçu / Test
+            currentModalDay: null,
+            resetArmed: false    // Double-clic sécurisé sans utiliser confirm()
+        };
+
+        // Ordre d'affichage (mélange fixe pour ne pas changer entre deux visites)
+        const DISPLAY_ORDER = CONFIG_CALENDRIER.melangerCases
+            ? [14, 3, 21, 8, 17, 1, 24, 11, 5, 19, 12, 2, 22, 9, 15, 6, 20, 4, 13, 23, 7, 16, 10, 18]
+            : Array.from({ length: 24 }, (_, i) => i + 1);
+
+        // Références DOM
+        const gridEl = document.getElementById('calendar-grid');
+        const progressEl = document.getElementById('progress-counter');
+        const modalEl = document.getElementById('gift-modal');
+        const toastEl = document.getElementById('toast-message');
+        const toastIconEl = document.getElementById('toast-icon');
+        const toastTextEl = document.getElementById('toast-text');
+        const previewBannerEl = document.getElementById('preview-banner');
+        const togglePreviewBtn = document.getElementById('toggle-preview-btn');
+        const resetProgressBtn = document.getElementById('reset-progress-btn');
+
+        let toastTimeout = null;
+        let resetArmTimeout = null;
+
+        /**
+         * Initialisation au chargement du DOM
+         */
+        function init() {
+            document.getElementById('calendar-title').textContent = CONFIG_CALENDRIER.titrePrincipal;
+            document.getElementById('calendar-subtitle').textContent = CONFIG_CALENDRIER.sousTitre;
+
+            loadState();
+            renderGrid();
+            updateProgress();
+            setupEventListeners();
+            initSnowfall();
+        }
+
+        /**
+         * Charge l'avancement depuis localStorage
+         */
+        function loadState() {
+            try {
+                const saved = localStorage.getItem(STORAGE_KEY);
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    state.openedDays = Array.isArray(parsed.openedDays) ? parsed.openedDays : [];
+                    state.claimedDays = Array.isArray(parsed.claimedDays) ? parsed.claimedDays : [];
+                }
+            } catch (e) {
+                console.warn("Lecture localStorage impossible :", e);
+            }
+        }
+
+        /**
+         * Sauvegarde l'avancement dans localStorage
+         */
+        function saveState() {
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify({
+                    openedDays: state.openedDays,
+                    claimedDays: state.claimedDays
+                }));
+            } catch (e) {
+                console.warn("Écriture localStorage impossible :", e);
+            }
+        }
+
+        /**
+         * Vérifie si la case est déverrouillée selon la date du jour (en décembre) ou le Mode Aperçu
+         */
+        function isDayUnlocked(dayNumber) {
+            if (state.previewMode) return true;
+
+            const now = new Date();
+            const currentMonth = now.getMonth(); // 11 = Décembre
+            const currentDate = now.getDate();
+
+            return currentMonth === 11 && currentDate >= dayNumber;
+        }
+
+        /**
+         * Indique si la case correspond exactement à aujourd'hui
+         */
+        function isToday(dayNumber) {
+            const now = new Date();
+            return now.getMonth() === 11 && now.getDate() === dayNumber;
+        }
+
+        /**
+         * Construit et affiche la grille des 24 cases
+         */
+        function renderGrid() {
+            gridEl.innerHTML = '';
+
+            DISPLAY_ORDER.forEach((dayNumber) => {
+                const gift = CADEAUX.find(item => item.jour === dayNumber) || {
+                    jour: dayNumber,
+                    titre: `Surprise du ${dayNumber} décembre`,
+                    message: "Une belle surprise t'attend aujourd'hui !",
+                    emoji: "🎁",
+                    image: ""
+                };
+
+                const unlocked = isDayUnlocked(dayNumber);
+                const opened = state.openedDays.includes(dayNumber);
+                const claimed = state.claimedDays.includes(dayNumber);
+                const todayHighlight = isToday(dayNumber) && !opened;
+
+                // Conteneur de la case : si déjà ouverte, la classe .is-open masque directement le battant
+                const cardWrapper = document.createElement('div');
+                cardWrapper.className = `door-container relative aspect-square select-none ${opened ? 'is-open' : ''}`;
+                cardWrapper.dataset.day = dayNumber;
+
+                // Intérieur de la case (visible une fois le battant ouvert et disparu)
+                const innerBox = document.createElement('button');
+                innerBox.type = 'button';
+                innerBox.className = `w-full h-full rounded-2xl bg-gradient-to-b from-creme-50 to-creme-100 text-bordeaux-950 border-2 ${
+                    claimed ? 'border-sapin-800/55' : 'border-dore-400'
+                } p-2.5 sm:p-3 flex flex-col items-center justify-between text-center shadow-inner cursor-pointer transition-all duration-200 hover:scale-[1.03] hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-dore-400`;
+                innerBox.setAttribute('aria-label', `Revoir la surprise du ${dayNumber} décembre : ${gift.titre}`);
+
+                innerBox.innerHTML = `
+                    <span class="text-[11px] font-semibold uppercase tracking-wider text-bordeaux-700/85">Jour ${dayNumber}</span>
+                    <div class="flex flex-col items-center justify-center my-auto px-0.5">
+                        <span class="text-2xl sm:text-3xl mb-1 leading-none" aria-hidden="true">${escapeHTML(gift.emoji || '🎁')}</span>
+                        <span class="font-serif font-bold text-xs sm:text-sm text-bordeaux-950 line-clamp-2 leading-tight">${escapeHTML(gift.titre)}</span>
+                    </div>
+                    <span class="inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full ${
+                        claimed ? 'bg-sapin-800 text-creme-50' : 'bg-dore-300/60 text-bordeaux-900'
+                    }">
+                        ${claimed ? '✓ Récupéré' : 'Voir ✨'}
+                    </span>
+                `;
+
+                innerBox.addEventListener('click', () => openGiftModal(dayNumber));
+
+                // Battant 3D (uniquement interactif tant que la case n'est pas ouverte)
+                const doorFlap = document.createElement('button');
+                doorFlap.type = 'button';
+                doorFlap.setAttribute('aria-label', `Ouvrir la case numéro ${dayNumber}`);
+
+                let doorStyleClasses = 'bg-gradient-to-br from-bordeaux-800 to-bordeaux-950 border-dore-400/45 text-creme-50 hover:border-dore-300 hover:brightness-110';
+                if (todayHighlight) {
+                    doorStyleClasses = 'bg-gradient-to-br from-sapin-800 to-sapin-900 border-dore-400 text-creme-50 today-glow';
+                } else if (!unlocked) {
+                    doorStyleClasses = 'bg-gradient-to-br from-bordeaux-900/95 to-nuit-950 border-dore-400/20 text-creme-200/75';
+                }
+
+                doorFlap.className = `door-flap card-texture absolute inset-0 w-full h-full rounded-2xl border-2 ${doorStyleClasses} p-3 flex flex-col items-center justify-center shadow-lg cursor-pointer focus:outline-none focus:ring-2 focus:ring-dore-400`;
+
+                const topBadge = todayHighlight
+                    ? `<span class="text-[10px] uppercase tracking-widest text-dore-300 font-semibold mb-0.5">Aujourd'hui</span>`
+                    : `<span class="text-dore-400/60 text-xs mb-0.5">✦</span>`;
+
+                const bottomIcon = unlocked
+                    ? `<span class="mt-1 text-[11px] text-dore-300/95 font-medium">Découvrir</span>`
+                    : `<span class="mt-1 text-dore-400/45" title="Patience...">
+                        <svg class="w-3.5 h-3.5 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                        </svg>
+                       </span>`;
+
+                doorFlap.innerHTML = `
+                    ${topBadge}
+                    <span class="font-serif text-3xl sm:text-4xl font-bold tracking-tight ${unlocked ? 'text-creme-50' : 'text-creme-200/80'}">${dayNumber}</span>
+                    ${bottomIcon}
+                `;
+
+                doorFlap.addEventListener('click', () => handleDoorClick(dayNumber, cardWrapper));
+
+                cardWrapper.appendChild(innerBox);
+                cardWrapper.appendChild(doorFlap);
+                gridEl.appendChild(cardWrapper);
+            });
+        }
+
+        /**
+         * Gère le clic sur un battant fermé :
+         * - Si verrouillé : secousse + toast mignon
+         * - Si déverrouillé : animation 3D d'ouverture suivie de la disparition en fondu du battant,
+         *   puis affichage de la modale avec confettis
+         */
+        function handleDoorClick(dayNumber, cardWrapper) {
+            if (!isDayUnlocked(dayNumber)) {
+                cardWrapper.classList.remove('shake-locked');
+                void cardWrapper.offsetWidth; // Force le reflow pour rejouer l'animation
+                cardWrapper.classList.add('shake-locked');
+
+                const randomTemplate = MESSAGES_PATIENCE[Math.floor(Math.random() * MESSAGES_PATIENCE.length)];
+                showToast(randomTemplate.replace('{jour}', dayNumber), '🤫');
+                return;
+            }
+
+            // Éviter un double déclenchement pendant l'animation
+            if (cardWrapper.classList.contains('is-opening') || cardWrapper.classList.contains('is-open')) {
+                return;
+            }
+
+            // 1. Lancer l'animation 3D d'ouverture + disparition en fondu du battant
+            cardWrapper.classList.add('is-opening');
+
+            // 2. Sauvegarder la case comme ouverte
+            if (!state.openedDays.includes(dayNumber)) {
+                state.openedDays.push(dayNumber);
+                saveState();
+                updateProgress();
+            }
+
+            // 3. Lancer une pluie d'étincelles/confettis et ouvrir la modale pendant la fin du fondu
+            setTimeout(() => {
+                launchConfetti();
+                openGiftModal(dayNumber);
+            }, 580);
+
+            // 4. À la fin exacte de l'animation (850ms), passer définitivement en .is-open (display: none sur le battant)
+            setTimeout(() => {
+                cardWrapper.classList.remove('is-opening');
+                cardWrapper.classList.add('is-open');
+            }, 860);
+        }
+
+        /**
+         * Affiche une notification douce en bas d'écran
+         */
+        function showToast(message, icon = '✨') {
+            toastIconEl.textContent = icon;
+            toastTextEl.textContent = message;
+            toastEl.classList.remove('opacity-0', 'translate-y-4', 'pointer-events-none');
+            toastEl.classList.add('opacity-100', 'translate-y-0');
+
+            clearTimeout(toastTimeout);
+            toastTimeout = setTimeout(() => {
+                toastEl.classList.add('opacity-0', 'translate-y-4', 'pointer-events-none');
+                toastEl.classList.remove('opacity-100', 'translate-y-0');
+            }, 3400);
+        }
+
+        /**
+         * Ouvre la modale d'affichage du cadeau
+         */
+        function openGiftModal(dayNumber) {
+            const gift = CADEAUX.find(item => item.jour === dayNumber);
+            if (!gift) return;
+
+            state.currentModalDay = dayNumber;
+
+            document.getElementById('modal-day').textContent = dayNumber;
+            document.getElementById('modal-emoji').textContent = gift.emoji || '🎁';
+            document.getElementById('modal-title').textContent = gift.titre;
+            document.getElementById('modal-message').textContent = gift.message;
+
+            // Gestion de l'image optionnelle
+            const imgWrapper = document.getElementById('modal-image-wrapper');
+            const imgEl = document.getElementById('modal-image');
+            if (gift.image && gift.image.trim() !== '') {
+                imgEl.src = gift.image.trim();
+                imgWrapper.classList.remove('hidden');
+            } else {
+                imgEl.src = '';
+                imgWrapper.classList.add('hidden');
+            }
+
+            updateClaimButtonUI(dayNumber);
+
+            modalEl.classList.remove('hidden');
+            modalEl.classList.add('flex');
+        }
+
+        /**
+         * Ferme la modale
+         */
+        function closeGiftModal() {
+            modalEl.classList.add('hidden');
+            modalEl.classList.remove('flex');
+            state.currentModalDay = null;
+        }
+
+        /**
+         * Met à jour le bouton "Marquer comme récupéré"
+         */
+        function updateClaimButtonUI(dayNumber) {
+            const claimBtn = document.getElementById('claim-gift-btn');
+            const isClaimed = state.claimedDays.includes(dayNumber);
+
+            if (isClaimed) {
+                claimBtn.className = "w-full sm:w-auto flex-1 py-3 px-5 rounded-2xl font-medium text-sm transition-all cursor-pointer flex items-center justify-center gap-2 shadow-sm bg-sapin-800 text-creme-50 hover:bg-sapin-900";
+                claimBtn.innerHTML = `<span>✓ Cadeau récupéré !</span>`;
+            } else {
+                claimBtn.className = "w-full sm:w-auto flex-1 py-3 px-5 rounded-2xl font-medium text-sm transition-all cursor-pointer flex items-center justify-center gap-2 shadow-md bg-bordeaux-800 hover:bg-bordeaux-900 text-creme-50 border border-dore-400/50";
+                claimBtn.innerHTML = `<span>🎁 Marquer comme récupéré</span>`;
+            }
+        }
+
+        /**
+         * Bascule l'état "récupéré" d'une surprise
+         */
+        function toggleClaimGift() {
+            const day = state.currentModalDay;
+            if (!day) return;
+
+            const index = state.claimedDays.indexOf(day);
+            if (index === -1) {
+                state.claimedDays.push(day);
+            } else {
+                state.claimedDays.splice(index, 1);
+            }
+
+            saveState();
+            updateClaimButtonUI(day);
+            renderGrid();
+        }
+
+        /**
+         * Met à jour le compteur de cases découvertes
+         */
+        function updateProgress() {
+            progressEl.textContent = `${state.openedDays.length} / 24`;
+        }
+
+        /**
+         * Active / désactive le Mode Aperçu / Test
+         */
+        function togglePreviewMode() {
+            state.previewMode = !state.previewMode;
+
+            if (state.previewMode) {
+                previewBannerEl.classList.remove('hidden');
+                togglePreviewBtn.textContent = "🔒 Quitter le Mode Aperçu / Test";
+                togglePreviewBtn.classList.add('bg-sapin-800', 'text-creme-50', 'border-dore-400');
+                showToast("Mode Aperçu actif : toutes les cases sont débloquées !", "🔑");
+            } else {
+                previewBannerEl.classList.add('hidden');
+                togglePreviewBtn.textContent = "🔑 Mode Aperçu / Test (Débloquer tout)";
+                togglePreviewBtn.classList.remove('bg-sapin-800', 'text-creme-50', 'border-dore-400');
+                showToast("Retour au verrouillage normal par date.", "🔒");
+            }
+
+            renderGrid();
+        }
+
+        /**
+         * Réinitialise les cases ouvertes avec confirmation douce en 2 clics (sans confirm())
+         */
+        function handleResetClick() {
+            if (!state.resetArmed) {
+                state.resetArmed = true;
+                resetProgressBtn.textContent = "⚠️ Cliquer encore pour tout refermer";
+                resetProgressBtn.classList.add('bg-bordeaux-800', 'text-creme-50', 'border-dore-400/60');
+
+                clearTimeout(resetArmTimeout);
+                resetArmTimeout = setTimeout(() => {
+                    state.resetArmed = false;
+                    resetProgressBtn.textContent = "↺ Réinitialiser les cases ouvertes";
+                    resetProgressBtn.classList.remove('bg-bordeaux-800', 'text-creme-50', 'border-dore-400/60');
+                }, 4000);
+                return;
+            }
+
+            // Deuxième clic confirmé : réinitialisation
+            clearTimeout(resetArmTimeout);
+            state.resetArmed = false;
+            resetProgressBtn.textContent = "↺ Réinitialiser les cases ouvertes";
+            resetProgressBtn.classList.remove('bg-bordeaux-800', 'text-creme-50', 'border-dore-400/60');
+
+            state.openedDays = [];
+            state.claimedDays = [];
+            saveState();
+            updateProgress();
+            renderGrid();
+
+            showToast("Toutes les cases ont été refermées comme neuves ✨", "↺");
+        }
+
+        /**
+         * Écouteurs d'événements globaux
+         */
+        function setupEventListeners() {
+            document.getElementById('close-modal-x').addEventListener('click', closeGiftModal);
+            document.getElementById('close-modal-btn').addEventListener('click', closeGiftModal);
+            document.getElementById('claim-gift-btn').addEventListener('click', toggleClaimGift);
+
+            modalEl.addEventListener('click', (e) => {
+                if (e.target === modalEl) closeGiftModal();
+            });
+
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && !modalEl.classList.contains('hidden')) {
+                    closeGiftModal();
+                }
+            });
+
+            togglePreviewBtn.addEventListener('click', togglePreviewMode);
+            resetProgressBtn.addEventListener('click', handleResetClick);
+        }
+
+        /**
+         * Échappe le HTML pour sécuriser l'affichage des titres
+         */
+        function escapeHTML(str) {
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+
+        /**
+         * Effet festif léger d'étincelles / confettis dorés et crème lors de l'ouverture d'une case
+         */
+        let confettiAnimId = null;
+        function launchConfetti() {
+            const canvas = document.getElementById('confetti-canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+
+            const colors = ['#d4af37', '#ebd29b', '#fdfbf7', '#e5989b', '#b38d1d'];
+            const particles = Array.from({ length: 55 }, () => {
+                const angle = Math.random() * Math.PI * 2;
+                const speed = Math.random() * 6 + 2.5;
+                return {
+                    x: canvas.width / 2,
+                    y: canvas.height * 0.45,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed - 3.5,
+                    size: Math.random() * 5 + 3,
+                    color: colors[Math.floor(Math.random() * colors.length)],
+                    rotation: Math.random() * 360,
+                    rotSpeed: (Math.random() - 0.5) * 10,
+                    alpha: 1,
+                    gravity: 0.14
+                };
+            });
+
+            if (confettiAnimId) cancelAnimationFrame(confettiAnimId);
+
+            function drawConfetti() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                let alive = false;
+
+                for (const p of particles) {
+                    if (p.alpha <= 0.02) continue;
+                    alive = true;
+
+                    p.x += p.vx;
+                    p.y += p.vy;
+                    p.vy += p.gravity;
+                    p.vx *= 0.985;
+                    p.rotation += p.rotSpeed;
+                    p.alpha -= 0.015;
+
+                    ctx.save();
+                    ctx.globalAlpha = Math.max(0, p.alpha);
+                    ctx.translate(p.x, p.y);
+                    ctx.rotate((p.rotation * Math.PI) / 180);
+                    ctx.fillStyle = p.color;
+                    ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size * 0.65);
+                    ctx.restore();
+                }
+
+                if (alive) {
+                    confettiAnimId = requestAnimationFrame(drawConfetti);
+                } else {
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    confettiAnimId = null;
+                }
+            }
+
+            drawConfetti();
+        }
+
+        /**
+         * Animation poétique et fluide de flocons de neige en arrière-plan
+         */
+        function initSnowfall() {
+            const canvas = document.getElementById('snow-canvas');
+            const ctx = canvas.getContext('2d');
+            let width = canvas.width = window.innerWidth;
+            let height = canvas.height = window.innerHeight;
+
+            window.addEventListener('resize', () => {
+                width = canvas.width = window.innerWidth;
+                height = canvas.height = window.innerHeight;
+            });
+
+            const flakeCount = Math.min(55, Math.floor(width / 22));
+            const flakes = Array.from({ length: flakeCount }, () => ({
+                x: Math.random() * width,
+                y: Math.random() * height,
+                r: Math.random() * 2.3 + 0.8,
+                speedY: Math.random() * 0.55 + 0.25,
+                speedX: Math.random() * 0.35 - 0.175,
+                opacity: Math.random() * 0.45 + 0.15
+            }));
+
+            function animateSnow() {
+                ctx.clearRect(0, 0, width, height);
+
+                for (const flake of flakes) {
+                    ctx.beginPath();
+                    ctx.arc(flake.x, flake.y, flake.r, 0, Math.PI * 2);
+                    ctx.fillStyle = `rgba(253, 251, 247, ${flake.opacity})`;
+                    ctx.fill();
+
+                    flake.y += flake.speedY;
+                    flake.x += flake.speedX + Math.sin(flake.y * 0.01) * 0.14;
+
+                    if (flake.y > height) {
+                        flake.y = -5;
+                        flake.x = Math.random() * width;
+                    }
+                    if (flake.x > width) flake.x = 0;
+                    if (flake.x < 0) flake.x = width;
+                }
+
+                requestAnimationFrame(animateSnow);
+            }
+
+            animateSnow();
+        }
+
+        window.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
